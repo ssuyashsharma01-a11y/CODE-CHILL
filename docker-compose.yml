@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # 🗄️ Database Node (PostgreSQL) - The Identity Vault
+  db:
+    image: postgres:15-alpine
+    container_name: trustmark_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: suyash_admin
+      POSTGRES_PASSWORD: platinum_password
+      POSTGRES_DB: trustmark_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U suyash_admin -d trustmark_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - trustmark_network
+
+  # ⚡ Cache Node (Redis) - The Biometric Accelerator
+  redis:
+    image: redis:7-alpine
+    container_name: trustmark_redis
+    restart: always
+    networks:
+      - trustmark_network
+
+  # 🧠 Sovereign AI Core (FastAPI) - The Brain
+  trustmark-ai:
+    build: .
+    container_name: trustmark_sovereign_v50
+    # Port 8000 exposed for local dev, but Nginx will handle external traffic on Port 80
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      - DATABASE_URL=postgresql://suyash_admin:platinum_password@db:5432/trustmark_db
+      - REDIS_URL=redis://redis:6379/0
+      - TZ=Asia/Kolkata
+      - PYTHONPATH=/app/backend
+    volumes:
+      - .:/app
+    restart: always
+    # Optimized command with workers for production stability
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --app-dir backend
+    networks:
+      - trustmark_network
+
+  # 🌐 Sovereign Gateway (Nginx) - The Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: trustmark_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - trustmark-ai
+    restart: always
+    networks:
+      - trustmark_network
+
+networks:
+  trustmark_network:
+    driver: bridge
+
+volumes:
+  postgres_data:

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrustMark Sovereign v26 - Platinum Engine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #050507; color: #f8fafc; font-family: 'Inter'; overflow: hidden; }
+        .neon-text { font-family: 'Orbitron'; color: #38bdf8; text-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
+        .glass-card { background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(56, 189, 248, 0.2); backdrop-filter: blur(10px); }
+        
+        /* 🎯 MODAL STYLING */
+        .modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.9); display: none; align-items: center; justify-content: center; z-index: 999; backdrop-filter: blur(10px); }
+        .modal.active { display: flex; }
+        
+        /* 📝 INPUT STYLING */
+        input, select, textarea { 
+            background: #1e293b; border: 1px solid #334155; 
+            padding: 12px; width: 100%; border-radius: 8px; color: white; margin-bottom: 10px;
+        }
+
+        /* 📹 OVERLAY FLOW */
+        .neural-overlay {
+            position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+            z-index: 50; background: rgba(0, 0, 0, 0.3);
+        }
+        .neural-overlay.active { display: flex; }
+        .task-circle {
+            width: 280px; height: 280px; border: 4px dashed #38bdf8; border-radius: 50%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: rgba(15, 23, 42, 0.6); animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse { 0%, 100% { scale: 1; } 50% { scale: 1.05; } }
+
+        .roster-item { 
+            padding: 12px; border-left: 3px solid #38bdf8; background: rgba(255,255,255,0.03); 
+            margin-bottom: 8px; cursor: pointer; transition: 0.3s; 
+        }
+        .roster-item:hover { background: rgba(56, 189, 248, 0.1); border-left-color: #fbbf24; }
+    </style>
+</head>
+<body>
+
+<div class="p-4 flex flex-col h-screen gap-4">
+    <div class="glass-card p-4 flex justify-between items-center rounded-xl shadow-2xl">
+        <div>
+            <h1 class="neon-text text-xl">TRUSTMARK SOVEREIGN</h1>
+            <p class="text-[8px] text-gray-500 font-mono">v26 // LEAD_DEV: SUYASH</p>
+        </div>
+        <div class="flex gap-4 items-center">
+            <button onclick="openModal()" class="text-cyan-400 border border-cyan-900/50 px-3 py-1 rounded text-[10px] font-bold">⚙️ COMMAND_CORE</button>
+            <button onclick="logout()" class="text-red-500 text-xs font-bold hover:bg-red-950/20 px-2 py-1 rounded">TERMINATE</button>
+        </div>
+    </div>
+
+    <div class="flex flex-1 gap-4 overflow-hidden">
+        <div class="flex-1 glass-card rounded-2xl overflow-hidden relative border-2 border-cyan-500/30">
+            <video id="video" autoplay muted class="w-full h-full object-cover scale-x-[-1]"></video>
+            
+            <div id="proctorOverlay" class="neural-overlay">
+                <div class="task-circle">
+                    <p id="taskText" class="text-white font-black text-center text-xl uppercase px-4"></p>
+                    <div class="mt-6 w-1/2 bg-gray-800 h-1 rounded-full overflow-hidden">
+                        <div id="progress" class="bg-cyan-500 h-full w-0"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="absolute bottom-4 left-4 z-20">
+                <p class="px-3 py-1 rounded-full bg-black/60 border border-cyan-500 text-[10px] font-bold text-cyan-400 uppercase">Neural Link: Active</p>
+            </div>
+        </div>
+
+        <div class="w-80 flex flex-col gap-4">
+            <div class="glass-card p-4 text-center rounded-xl">
+                <p class="text-[10px] text-gray-500 uppercase">Registry Buffer</p>
+                <h2 id="count" class="text-4xl neon-text">0</h2>
+            </div>
+
+            <div id="list" class="glass-card p-4 flex-1 overflow-y-auto rounded-xl">
+                <p id="awaiting" class="text-[10px] text-gray-600 text-center py-20 font-mono">AWAITING IDENTIFICATION...</p>
+            </div>
+            
+            <div class="glass-card p-4 rounded-xl text-center border-t-2 border-cyan-500">
+                <p id="current-name" class="neon-text text-sm uppercase">MATRIX_READY</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="adminModal" class="modal">
+    <div class="glass-card p-8 rounded-2xl border border-red-500 w-[450px] shadow-2xl">
+        <h2 class="neon-text text-lg text-red-400 mb-6 uppercase">⚙️ Sovereign Command</h2>
+        
+        <div class="space-y-4">
+            <div class="p-4 bg-slate-900/50 rounded-lg border border-cyan-900/30">
+                <h3 class="text-cyan-400 text-[10px] font-bold mb-4 uppercase">🎓 Bulk Duty Leave</h3>
+                <input id="uid" placeholder="Student UID">
+                <div class="flex gap-2">
+                    <input id="startDate" type="date" title="Start Date">
+                    <input id="endDate" type="date" title="End Date">
+                </div>
+                <button onclick="grantDL()" class="bg-cyan-600 w-full py-2 mt-2 rounded font-black text-xs uppercase">Authorize DL</button>
+            </div>
+
+            <div class="p-4 bg-slate-900/50 rounded-lg border border-yellow-900/30">
+                <h3 class="text-yellow-500 text-[10px] font-bold mb-3 uppercase">📢 Broadcast notice</h3>
+                <textarea id="notice" placeholder="Enter signal text..." class="h-20"></textarea>
+                <button onclick="sendNotice()" class="bg-yellow-600 w-full py-2 rounded font-black text-xs uppercase">Send Signal</button>
+            </div>
+
+            <button onclick="closeModal()" class="w-full border border-gray-700 py-2 rounded text-[10px] font-bold uppercase">Exit Command</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = "/api/v1";
+    let ws = null;
+    let users = new Set();
+    let isChallenging = false;
+
+    // 📷 Camera Init
+    async function startCamera() {
+        const v = document.getElementById("video");
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            v.srcObject = stream;
+        } catch (e) { alert("Camera Permission Denied"); }
+    }
+
+    // 📡 WebSocket Linking
+    function connectWS() {
+        ws = new WebSocket(`wss://${location.host}${API_BASE}/attendance/ws`);
+
+        ws.onmessage = e => {
+            const d = JSON.parse(e.data);
+            if (d.status === "SUCCESS" && d.uid && !users.has(d.uid) && !isChallenging) {
+                runChallenge(d.uid, d.name);
+            }
+        };
+
+        ws.onclose = () => setTimeout(connectWS, 3000);
+    }
+
+    // 🤖 Proctor Challenge Flow
+    async function runChallenge(uid, name) {
+        isChallenging = true;
+        const overlay = document.getElementById("proctorOverlay");
+        const text = document.getElementById("taskText");
+        const bar = document.getElementById("progress");
+
+        const tasks = ["BLINK NOW", "SMILE PLEASE", "LOOK LEFT ⬅️", "LOOK RIGHT ➡️"];
+        const task = tasks[Math.floor(Math.random() * tasks.length)];
+
+        overlay.classList.add("active");
+        text.innerText = `IDENTIFIED: ${name.split(' ')[0]}\nTASK: ${task}`;
+        
+        bar.style.transition = "none"; bar.style.width = "0%";
+        setTimeout(() => { bar.style.transition = "width 3s linear"; bar.style.width = "100%"; }, 50);
+
+        await new Promise(r => setTimeout(r, 3500));
+
+        overlay.classList.remove("active");
+        addUser(uid, name);
+        isChallenging = false;
+    }
+
+    // 👥 Registry Update
+    function addUser(uid, name) {
+        if (users.has(uid)) return;
+        users.add(uid);
+
+        const list = document.getElementById("list");
+        const awaiting = document.getElementById("awaiting");
+        if (awaiting) awaiting.remove();
+
+        const div = document.createElement("div");
+        div.className = "roster-item animate-fade-in";
+        div.onclick = () => window.location.href = `/api/v1/pages/students?uid=${uid}`;
+        div.innerHTML = `
+            <p class="text-cyan-300 text-[10px] font-black uppercase">${name}</p>
+            <p class="text-[8px] text-gray-500 font-mono">${uid}</p>
+            <span class="text-[7px] text-green-500 font-bold">VERIFIED</span>
+        `;
+
+        list.prepend(div);
+        document.getElementById("count").innerText = users.size;
+        document.getElementById("current-name").innerText = name.toUpperCase();
+    }
+
+    // ⚙️ Admin Actions
+    async function grantDL() {
+        const payload = {
+            uid: document.getElementById("uid").value,
+            start_date: document.getElementById("startDate").value,
+            end_date: document.getElementById("endDate").value || document.getElementById("startDate").value
+        };
+        const res = await fetch(`${API_BASE}/admin/dl`, {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(payload)
+        });
+        alert(res.ok ? "✅ DL AUTHORIZED" : "❌ FAILED");
+    }
+
+    async function sendNotice() {
+        const content = document.getElementById("notice").value;
+        const res = await fetch(`${API_BASE}/admin/notice`, {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ content })
+        });
+        if(res.ok) { alert("📢 SIGNAL DEPLOYED"); closeModal(); }
+    }
+
+    function openModal() { document.getElementById("adminModal").classList.add("active"); }
+    function closeModal() { document.getElementById("adminModal").classList.remove("active"); }
+    function logout() { fetch(`${API_BASE}/logout`, {method:"POST"}).then(() => location.reload()); }
+
+    // Init
+    startCamera();
+    connectWS();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sovereign | Registered Identities</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@400;600&family=Space+Mono&display=swap" rel="stylesheet">
+    <style>
+        body { background: #050507; color: #f8fafc; font-family: 'Inter', sans-serif; padding: 1.5rem; }
+        .neon-text { font-family: 'Orbitron', sans-serif; color: #38bdf8; text-shadow: 0 0 10px rgba(56, 189, 248, 0.4); }
+        .glass-panel { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(56, 189, 248, 0.1); border-radius: 1rem; }
+        .identity-card { background: rgba(30, 41, 59, 0.2); border: 1px solid rgba(255, 255, 255, 0.05); transition: 0.3s; }
+        .identity-card:hover { border-color: #38bdf8; background: rgba(56, 189, 248, 0.03); }
+        .sub-table { width: 100%; font-size: 10px; border-collapse: collapse; margin-top: 12px; }
+        .sub-table th { color: #64748b; text-align: left; padding: 6px 4px; border-bottom: 1px solid rgba(56, 189, 248, 0.1); text-transform: uppercase; font-size: 8px; }
+        .sub-table td { padding: 8px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.02); }
+        .shortage-text { color: #ef4444; font-weight: bold; }
+        .healthy-text { color: #10b981; font-weight: bold; }
+        .search-bar { background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(56, 189, 248, 0.2); color: white; outline: none; }
+        .search-bar:focus { border-color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
+    </style>
+</head>
+<body>
+    <div class="max-w-7xl mx-auto">
+        <div class="flex justify-between items-center mb-8 border-b border-cyan-900/30 pb-6">
+            <div>
+                <h1 class="neon-text text-2xl uppercase tracking-tighter">Identity Roster</h1>
+                <p class="text-[9px] text-gray-500 font-mono tracking-widest uppercase">Matrix Intelligence // Neural_Analysis_v25</p>
+            </div>
+            <div class="flex gap-4">
+                <div class="glass-panel px-6 py-2 border-b-2 border-cyan-500 text-center">
+                    <p class="text-[8px] text-gray-500 uppercase font-bold">Avg Attendance</p>
+                    <p id="avg-attendance-val" class="text-lg font-black tracking-tighter">--%</p>
+                </div>
+                <div class="glass-panel px-6 py-2 border-b-2 border-red-500 text-center">
+                    <p class="text-[8px] text-gray-500 uppercase font-bold">Shortage Alerts</p>
+                    <p id="shortage-alerts-val" class="text-lg font-black tracking-tighter">--</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-6 flex justify-between items-center">
+            <input type="text" id="uidSearch" placeholder="SEARCH UID OR NAME..." oninput="filterRegistry()" class="search-bar px-6 py-2 rounded-lg text-xs font-mono w-96">
+            <a href="/api/v1/pages/index" class="text-[10px] text-cyan-500 border border-cyan-500/30 px-4 py-2 rounded-lg hover:bg-cyan-500/10 transition font-bold uppercase tracking-widest">← Return to Dashboard</a>
+        </div>
+
+        <div id="registry-list" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <p class="col-span-full text-center py-20 text-gray-600 animate-pulse font-mono uppercase tracking-[0.5em]">Synchronizing Subject Matrix...</p>
+        </div>
+    </div>
+
+    <script>
+        let fullRegistryData = [];
+        const token = localStorage.getItem("access_token");
+        // 🎯 Trash filter to keep the UI clean during Expo
+        const TRASH_SUBJECTS = ["FULL_DAY_DL", "EXPO_PLATINUM_DEMO", "GENERAL_DL", "SYSTEM_TEST", "NULL"];
+
+        async function init() {
+            if(!token) return window.location.replace('/api/v1/pages/login-page');
+            try {
+                // Fetch Stats
+                const statsRes = await fetch('/api/v1/admin/analytics-live', { headers: { 'Authorization': `Bearer ${token}` } });
+                const stats = await statsRes.json();
+                document.getElementById('avg-attendance-val').innerText = (stats.avg_attendance || 0) + "%";
+                document.getElementById('shortage-alerts-val').innerText = stats.shortage_alerts || 0;
+
+                // Fetch Student Data
+                const rosterRes = await fetch('/api/v1/admin/students', { headers: { 'Authorization': `Bearer ${token}` } });
+                fullRegistryData = await rosterRes.json();
+                
+                // Handle UID search from dashboard redirect
+                const urlParams = new URLSearchParams(window.location.search);
+                const q = urlParams.get('uid');
+                if(q) document.getElementById('uidSearch').value = q;
+
+                render(fullRegistryData);
+            } catch (e) { console.error("Matrix Sync Error:", e); }
+        }
+
+        function render(data) {
+            const container = document.getElementById('registry-list');
+            
+            if(data.length === 0) {
+                container.innerHTML = `<p class="col-span-full text-center py-20 text-gray-700 font-mono">NO IDENTITIES IDENTIFIED IN MATRIX</p>`;
+                return;
+            }
+
+            container.innerHTML = data.map(s => {
+                const isShort = s.overall_attendance < 75;
+                
+                // 📊 Constructing Subject Table with Trash Filtering
+                let subRows = "";
+                if(s.subject_attendance && Object.keys(s.subject_attendance).length > 0) {
+                    Object.keys(s.subject_attendance).forEach(sub => {
+                        // 🛡️ Skip dummy/trash labels
+                        if(TRASH_SUBJECTS.includes(sub.toUpperCase())) return;
+
+                        const info = s.subject_attendance[sub];
+                        const subShort = info.attendance_percent < 75;
+                        subRows += `
+                            <tr class="hover:bg-white/5 transition">
+                                <td class="text-cyan-400 font-mono font-bold">${sub}</td>
+                                <td class="text-center text-gray-400 font-mono">${info.attended} / ${info.total_classes}</td>
+                                <td class="text-right ${subShort ? 'shortage-text' : 'healthy-text'} font-mono">${info.attendance_percent}%</td>
+                            </tr>
+                        `;
+                    });
+                } 
+                
+                // Final fallback if all subjects were trash or empty
+                if(subRows === "") {
+                    subRows = `<tr><td colspan="3" class="text-center text-gray-700 py-6 font-mono italic">Awaiting Verified Class Data...</td></tr>`;
+                }
+
+                return `
+                    <div class="identity-card p-6 rounded-2xl shadow-xl">
+                        <div class="flex justify-between items-start mb-6">
+                            <div class="flex gap-4">
+                                <div class="w-14 h-14 bg-cyan-900/30 rounded-2xl border border-cyan-500/30 flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(56,189,248,0.2)]">👤</div>
+                                <div>
+                                    <h2 class="text-lg font-black tracking-tighter text-white uppercase">${s.name}</h2>
+                                    <p class="text-[10px] text-gray-500 font-mono tracking-widest">${s.uid}</p>
+                                    <div class="mt-2 flex gap-2">
+                                        <span class="text-[7px] font-black px-2 py-0.5 rounded uppercase border ${isShort ? 'border-red-900 text-red-500 bg-red-900/10' : 'border-green-900 text-green-500 bg-green-900/10'}">${isShort ? 'Shortage' : 'Healthy'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-3xl font-black ${isShort ? 'text-red-500' : 'text-green-500'} font-mono leading-none">${s.overall_attendance}%</p>
+                                <p class="text-[8px] text-gray-600 font-bold uppercase tracking-[0.2em] mt-1">Overall Matrix</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 bg-black/20 rounded-xl p-2 border border-white/5">
+                            <table class="sub-table">
+                                <thead>
+                                    <tr>
+                                        <th class="w-1/2">Subject Identifier</th>
+                                        <th class="text-center">Nodes</th>
+                                        <th class="text-right">Accuracy</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${subRows}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterRegistry() {
+            const query = document.getElementById('uidSearch').value.toUpperCase();
+            const filtered = fullRegistryData.filter(s => 
+                s.uid.toUpperCase().includes(query) || s.name.toUpperCase().includes(query)
+            );
+            render(filtered);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>

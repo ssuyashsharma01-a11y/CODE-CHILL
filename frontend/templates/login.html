@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrustMark AI | Secure Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #050507; 
+            color: #f8fafc; 
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .neon-border { box-shadow: 0 0 20px rgba(56, 189, 248, 0.2); border: 1px solid rgba(56, 189, 248, 0.4); }
+        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border-radius: 1.5rem; padding: 2rem; width: 100%; max-width: 24rem; text-align: center; }
+        .neon-text { font-family: 'Orbitron', monospace; color: #38bdf8; text-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
+        .form-group { text-align: left; margin-bottom: 1.25rem; }
+        .form-label { display: block; font-size: 0.65rem; font-weight: 700; color: #94a3b8; margin-bottom: 0.5rem; text-transform: uppercase; }
+        .form-input { width: 100%; padding: 1rem; border-radius: 0.75rem; background: rgba(51, 65, 85, 0.5); border: 1px solid #334155; color: white; outline: none; }
+        .form-input:focus { border-color: #38bdf8; }
+        .btn { width: 100%; padding: 1rem; border: none; border-radius: 0.625rem; font-weight: 700; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
+        .btn-primary { background: #0ea5e9; color: white; }
+        .btn-primary:hover { background: #38bdf8; box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
+        .btn-secondary { background: transparent; border: 1px solid #38bdf8; color: #38bdf8; margin-top: 1rem; font-size: 0.7rem; }
+        .footer-links { margin-top: 1.5rem; font-size: 0.6rem; display: flex; justify-content: center; gap: 10px; }
+        .link-hover { color: #38bdf8; text-decoration: none; cursor: pointer; }
+        .hidden { display: none; }
+        .error-msg { color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 0.5rem; border-radius: 0.5rem; margin-top: 1rem; font-size: 0.7rem; border: 1px solid rgba(239, 68, 68, 0.2); }
+    </style>
+</head>
+<body>
+    <div class="glass neon-border">
+        <div class="login-header">
+            <h1 class="neon-text">TRUSTMARK</h1>
+            <p style="color: #64748b; font-size: 0.8rem;">v25.0 Platinum Sovereign</p>
+        </div>
+        
+        <form id="loginForm" style="margin-top: 2rem;">
+            <div class="form-group">
+                <label class="form-label">Sovereign Identifier (UID)</label>
+                <input type="text" id="uid" name="username" placeholder="25BAI70757" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Security Access Key</label>
+                <input type="password" id="password" name="password" placeholder="••••••••" class="form-input" required>
+            </div>
+            
+            <button type="submit" id="submitBtn" class="btn btn-primary">Initialize Session</button>
+            <button type="button" onclick="fillDemo()" class="btn btn-secondary">Auto-Fill Demo Credentials</button>
+        </form>
+
+        <div id="statusContainer" class="hidden">
+            <p id="errorMsg" class="error-msg"></p>
+        </div>
+
+        <div class="footer-links">
+            <a href="/api/v1/pages/index" class="link-hover">Direct Dashboard Access</a>
+            <span style="color: #475569;">•</span>
+            <span class="link-hover" onclick="alert('CU-Sovereign Auth Active')">System Status</span>
+        </div>
+    </div>
+
+    <script>
+        function fillDemo() {
+            document.getElementById('uid').value = '25BAI70757';
+            document.getElementById('password').value = 'trustmark_secure';
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submitBtn');
+            const errorMsg = document.getElementById('errorMsg');
+            const statusContainer = document.getElementById('statusContainer');
+
+            submitBtn.innerText = "VERIFYING...";
+            submitBtn.disabled = true;
+            statusContainer.classList.add('hidden');
+
+            const formData = new URLSearchParams();
+            formData.append('username', document.getElementById('uid').value.toUpperCase().trim());
+            formData.append('password', document.getElementById('password').value);
+
+            try {
+                const response = await fetch('/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // 🎯 IMPORTANT: Store token for index.html to use
+                    localStorage.setItem("access_token", data.access_token);
+                    
+                    submitBtn.innerText = "ACCESS GRANTED";
+                    submitBtn.style.background = "#059669";
+                    submitBtn.style.boxShadow = "0 0 20px rgba(5, 150, 105, 0.5)";
+                    
+                    setTimeout(() => {
+                        // Using replace to prevent back-button loop
+                        window.location.replace('/api/v1/pages/index');
+                    }, 600);
+                } else {
+                    throw new Error(data.detail || "Unauthorized Access");
+                }
+            } catch (err) {
+                errorMsg.innerText = "CRITICAL ERROR: " + err.message.toUpperCase();
+                statusContainer.classList.remove('hidden');
+                submitBtn.innerText = "RE-INITIALIZE";
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
